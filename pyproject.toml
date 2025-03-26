@@ -1,4 +1,16 @@
-[tool.black]
-line-length = 88
-target-version = ['py11']
-skip-string-normalization = 1
+[tool.poetry]
+package-mode = false
+name = "appium-android-tests"
+version = "0.1.0"
+description = "A sample Python project for Appium Android tests"
+authors = ["Your Name <your.email@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytest = "*"
+allure-pytest = "*"
+selene = ">=2.0.0rc4"
+Appium-Python-Client = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"
