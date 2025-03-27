@@ -1,24 +1,20 @@
-from http.client import responses
-
+import os
 import allure
 import pytest
 import allure_commons
-from appium.options.android import UiAutomator2Options
-from pytest_asyncio.plugin import pytest_fixture_setup
-from selene import browser, support
-import os
-
-import config
-from selene_in_action import utils
-
 from appium import webdriver
+from appium.options.android import UiAutomator2Options
+from selene import browser, support
+from selene_in_action.utils.file import abs_path_from_project
 
 
 @pytest.fixture(scope='function', autouse=True)
 def mobile_management():
+    apk_path = abs_path_from_project('app-gms-release_test.2.19.0.1414.apk')
+
     options = UiAutomator2Options().load_capabilities({
         'deviceName': 'R58R33ANL0T',
-        'app': '/Users/dm.yudin/Downloads/app-gms-release_test.2.19.0.1414.apk'
+        'app': apk_path
     })
 
 
@@ -51,5 +47,3 @@ def mobile_management():
 
     with allure.step('tear down app session'):
         browser.quit()
-
-

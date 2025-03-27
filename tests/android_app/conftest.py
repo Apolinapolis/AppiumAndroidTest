@@ -1,44 +1,40 @@
-from http.client import responses
-
+import os
 import allure
 import pytest
+import config
 import allure_commons
 from appium.options.android import UiAutomator2Options
-from pytest_asyncio.plugin import pytest_fixture_setup
 from selene import browser, support
-import os
-
-import config
 from selene_in_action import utils
-
 from appium import webdriver
 
 
 @pytest.fixture(scope='function', autouse=True)
 def mobile_management():
-    options = UiAutomator2Options().load_capabilities({
-        # Specify device and os_version for testing
-        # 'platformName': 'android',
-        'platformVersion': '9.0',
-        'deviceName': 'Google Pixel 3',
+    options = UiAutomator2Options()
 
-        # Set URL of the application under test
-        'app': 'bs://sample.app',
+    if config.device_name:
+        options.set_capability('deviceName', config.device_name)
 
-        # Set other BrowserStack capabilities
-        'bstack:options': {
-            'projectName': 'First Python project',
-            'buildName': 'browserstack-build-1',
-            'sessionName': 'BStack first_test',
+    if config.appWaitActivity:
+        options.set_capability('appWaitActivity', config.appWaitActivity)
 
-            # Set your access credentials
-            'userName': config.bstack_userName,
-            'accessKey': config.bstack_accessKey,
-        }
-    })
+    options.set_capability('app', (
+        config.app if (config.app.startswith('/') or config.run_on_bstack)
+        else utils.file.abs_path_from_project(config.app)
+    ))
 
-    # browser.config.driver_remote_url = 'http://hub.browserstack.com/wd/hub'
-    # browser.config.driver_options = options
+    if config.run_on_bstack:
+        options.set_capability(
+            'bstack:options', {
+                'projectName': 'First Python project',
+                'buildName': 'browserstack-build-1',
+                'sessionName': 'BStack first_test',
+                'userName': config.bstack_userName,
+                'accessKey': config.bstack_accessKey,
+            }
+        )
+
 
     with allure.step('init app session'):
         browser.config.driver = webdriver.Remote(
@@ -71,6 +67,5 @@ def mobile_management():
     with allure.step('tear down app session'):
         browser.quit()
 
-    utils.allure.attach_bstack_video(session_id)
-
-
+    if config.run_on_bstack:
+        utils.allure.attach_bstack_video(session_id)
