@@ -1,32 +1,12 @@
-import logging
+import logging, time
 from allure_commons._allure import step
-from appium.webdriver.common.appiumby import AppiumBy
 from selene import browser, have, be
-
+from PIL import Image
+from tests.android_app_culture.locators import Locators
 
 
 logger = logging.getLogger(__name__)
 
-
-class Locators:
-    PROFILE_TAB = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/vcbn_ll_profile')
-    PROFILE_BUTTONS = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/vsc_tv_title')
-    FAVORITE_TAB = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/vcbn_inc_favorites')
-    ONBOARDING_NEXT_BUTTON = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/root')
-    PERMISSION_ALLOW_BUTTON = (AppiumBy.ID, 'com.android.permissioncontroller:id/permission_allow_button')
-    PERMISSION_ONE_TIME_BUTTON = (AppiumBy.ID,'com.android.permissioncontroller:id/permission_allow_one_time_button')
-    CLOSE_BUTTON = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/fbb_iv_close')
-    POPULAR_LIST_TITLE = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/ipl_tv_title')
-    WIDGET_BUTTON = (AppiumBy.XPATH, '//android.widget.Button')
-    FAVORITE_BUTTONS = '//android.widget.ImageView[@resource-id="ru.gosuslugi.culture.test:id/ip_iv_favorite_btn"]'
-    LOGIN_WINDOW = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/title_template')
-    AUTH_ABORT_BUTTON = (AppiumBy.ID, 'android:id/button2')
-    AUTH_BUTTON = (AppiumBy.ID, 'android:id/button2')
-    FAVORITE_PLACES_TAB = (AppiumBy.XPATH, '//android.widget.LinearLayout[@content-desc="места"]')
-    EMPTY_FAVORITE_TEXT = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/vce_tv_title')
-    BLACK_THEME_BTH = (AppiumBy.XPATH, '//androidx.compose.ui.platform.ComposeView/android.view.View/android.view.View/android.view.View[2]/android.view.View[1]')
-    WHITE_THEME_BTH = (AppiumBy.XPATH, '//androidx.compose.ui.platform.ComposeView/android.view.View/android.view.View/android.view.View[1]/android.view.View[1]')
-    BACKGROUND_ELEMENT = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/am_fl_tooltip_container')
 
 
 def skip_onboarding():
@@ -42,36 +22,58 @@ def skip_onboarding():
         browser.element(Locators.CLOSE_BUTTON).click()
 
 
-def switch_color_theme():
-    browser.element(Locators.PROFILE_TAB).click()
-    browser.all(Locators.PROFILE_BUTTONS)[1].click()
-    #Проверяю темную тему
-    browser.element(Locators.BLACK_THEME_BTH).click()
-    background_element = browser.element(Locators.BACKGROUND_ELEMENT)
-    background_color = background_element.get('background')
-    assert background_color == '#000000', f"Background color is not black: {background_color}"
-    #Проверяю светлую тему
-    browser.element(Locators.WHITE_THEME_BTH).click()
-    background_element = browser.element(Locators.BACKGROUND_ELEMENT)
-    background_color = background_element.get_attribute('background')  # или другой атрибут
-    assert background_color == '#FFFFFF', f"Background color is not white: {background_color}"
+def get_pixel_color_from_screenshot(screenshot_path, x, y):
+    image = Image.open(screenshot_path)
+    pixel_color = image.getpixel((x, y))
+    return pixel_color
 
 
-def test_search():
+def test_switch_color_theme():
+    # Определяем координаты для проверки цвета
+    screen_width, screen_height = browser.driver.get_window_size().values()
+    x, y = screen_width // 2, screen_height // 2  # Центр экрана
+
+    with step('Switch to black theme'):
+        browser.element(Locators.PROFILE_TAB).click()
+        browser.all(Locators.PROFILE_BUTTONS)[1].click()
+        browser.element(Locators.BLACK_THEME_BTH).click()
+
+        # Ожидание для рендера цвета и скриншот
+        time.sleep(1)
+        screenshot_path = "black_theme.png"
+        browser.driver.save_screenshot(screenshot_path)
+
+        background_color = get_pixel_color_from_screenshot(screenshot_path, x, y)
+        assert background_color[:3] == (0, 0, 0), f"Background color is not black: {background_color}"
+
+    with step('Switch to white theme'):
+        browser.element(Locators.WHITE_THEME_BTH).click()
+
+        # Ожидание для рендера цвета и скриншот
+        time.sleep(1)
+        screenshot_path = "white_theme.png"
+        browser.driver.save_screenshot(screenshot_path)
+
+        background_color = get_pixel_color_from_screenshot(screenshot_path, x, y)
+        assert background_color[:3] == (255, 255, 255), f"Background color is not white: {background_color}"
+
+
+
+def test_app_culture_smoke():
     skip_onboarding()
-    with step('Verify that the popular list contains "Пушкинские премьеры"'):
+    with step('Main page verify'):
         results = browser.all(Locators.POPULAR_LIST_TITLE)
         results.should(have.size_greater_than(0))
         results.first.should(have.text('Пушкинские премьеры'))
 
-    with step('try to add favorite'):
+    with step('Try to add favorite'):
         favorite_buttons = browser.all(('xpath', Locators.FAVORITE_BUTTONS))
         favorite_buttons[0].click()
         browser.element(Locators.LOGIN_WINDOW).should(be.visible)
         browser.element(Locators.AUTH_BUTTON).should(be.visible)
         browser.element(Locators.AUTH_ABORT_BUTTON).click()
 
-    with step('check favorite list'):
+    with step('Check favorite list'):
         empty_favorite_events_text = 'Авторизуйтесь, чтобы увидеть избранные события'
         empty_favorite_places_text = 'Авторизуйтесь, чтобы увидеть избранные места проведения'
         browser.element(Locators.FAVORITE_TAB).click()
@@ -79,5 +81,5 @@ def test_search():
         browser.element(Locators.FAVORITE_PLACES_TAB).click()
         browser.element(Locators.EMPTY_FAVORITE_TEXT).should(have.text(empty_favorite_places_text))
 
-    with step('switch_color_theme'):
-        switch_color_theme()
+    with step('Switch_color_theme'):
+        test_switch_color_theme()
