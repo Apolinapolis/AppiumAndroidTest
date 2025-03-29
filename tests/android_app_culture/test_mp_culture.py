@@ -4,7 +4,9 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selene import browser, have, be
 
 
+
 logger = logging.getLogger(__name__)
+
 
 class Locators:
     PROFILE_TAB = (AppiumBy.ID, 'ru.gosuslugi.culture.test:id/vcbn_ll_profile')
@@ -28,7 +30,6 @@ class Locators:
 
 
 def skip_onboarding():
-
     logger.info("Starting onboarding skipping...")
     with step('Skipping onboarding'):
         for _ in range(4):
@@ -55,8 +56,8 @@ def switch_color_theme():
     background_color = background_element.get_attribute('background')  # или другой атрибут
     assert background_color == '#FFFFFF', f"Background color is not white: {background_color}"
 
-def test_search():
 
+def test_search():
     skip_onboarding()
     with step('Verify that the popular list contains "Пушкинские премьеры"'):
         results = browser.all(Locators.POPULAR_LIST_TITLE)
